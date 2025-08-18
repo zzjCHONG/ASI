@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36121.58
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ASI", "ASI\ASI.csproj", "{431B2469-89BC-4436-B706-4B8C801AF1F9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ASIWpf", "ASIWpf\ASIWpf.csproj", "{0C370288-052C-49F9-9CB8-27D27CE9799A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{431B2469-89BC-4436-B706-4B8C801AF1F9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{431B2469-89BC-4436-B706-4B8C801AF1F9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{431B2469-89BC-4436-B706-4B8C801AF1F9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{431B2469-89BC-4436-B706-4B8C801AF1F9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0C370288-052C-49F9-9CB8-27D27CE9799A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0C370288-052C-49F9-9CB8-27D27CE9799A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0C370288-052C-49F9-9CB8-27D27CE9799A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0C370288-052C-49F9-9CB8-27D27CE9799A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {73A2CB3C-51DE-44F7-ABD8-F64D37BF8C31}
+	EndGlobalSection
+EndGlobal
