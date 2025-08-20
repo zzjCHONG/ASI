@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.IO.Ports;
+﻿using System.IO.Ports;
 using System.Text.RegularExpressions;
 
 namespace ASI
@@ -201,11 +200,12 @@ namespace ASI
             try
             {
                 string command = $"V";
-                _serialPort!.Write(command + '\r');
 
-                if (!CheckReturnMsg(command, WaitValue())) return false;
+                if (!SendCommand(command, out var respond)) return false;
 
-                version = WaitValue();
+                if (!CheckReturnMsg(command, respond)) return false;
+
+                version = respond;
 
                 Console.WriteLine("[XXX] GetVersion Success");
 
@@ -230,9 +230,9 @@ namespace ASI
             {
                 var axis = string.Join(" ", axes.Where(v => map.ContainsKey(v)).Select(v => map[v]));
                 string command = $"W {axis}";
-                _serialPort!.Write(command + '\r');
 
-                var resp = WaitValue();
+                if (!SendCommand(command, out var resp)) return false;
+
                 if (!CheckReturnMsg(command, resp)) return false;
 
                 var disp = resp.Replace("\r\n", "").Replace(":A ", "");
@@ -276,9 +276,9 @@ namespace ASI
             {
                 var axis = string.Join(" ", axes.Where(v => map.ContainsKey(v)).Select(v => $"{map[v]}-"));
                 string command = $"RS {axis}";
-                _serialPort!.Write(command + '\r');
 
-                var resp = WaitValue();
+                if (!SendCommand(command, out var resp)) return false;
+
                 if (!CheckReturnMsg(command, resp)) return false;
 
                 var disp = resp.Replace("\r\n", "").Replace(":A", "");
@@ -322,16 +322,10 @@ namespace ASI
             {
                 var axis = string.Join(" ", axes.Where(v => map.ContainsKey(v)).Select(v => $"{map[v]}?"));
                 string command = $"RS {axis}";
-                _serialPort!.Write(command + '\r');
 
-                var resp = WaitValue();
+                if (!SendCommand(command, out var resp)) return false;
+
                 if (!CheckReturnMsg(command, resp)) return false;
-
-                //if (!resp.Contains('N') && !resp.Contains('B'))
-                //{
-                //    Console.WriteLine("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ " + resp);
-                //    return true;//信息串扰导致的获取错误
-                //}
 
                 resp = resp.Replace("\r\n", "").Replace(":A", "");
                 string[] values = resp.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -365,9 +359,9 @@ namespace ASI
             {
                 if (!map.TryGetValue(axis, out var str)) return false;
                 string command = $"S {str}?";
-                _serialPort!.Write(command + '\r');
 
-                var resp = WaitValue();
+                if (!SendCommand(command, out var resp)) return false;
+
                 if (!CheckReturnMsg(command, resp)) return false;
 
                 resp = resp.Replace("\r\n", "").Replace(":A ", "");
@@ -400,9 +394,9 @@ namespace ASI
             {
                 if (!map.TryGetValue(axis, out var str)) return false;
                 string command = $"S {str}={speed}";//S X=1.23 Y=3.21 Z=0.2
-                _serialPort!.Write(command + '\r');
 
-                var resp = WaitValue();
+                if (!SendCommand(command, out var resp)) return false;
+
                 if (!CheckReturnMsg(command, resp)) return false;
 
                 Console.WriteLine("[XXX] SetSpeed Success");
@@ -429,9 +423,8 @@ namespace ASI
             {
                 var axis = string.Join(" ", axes.Where(v => map.ContainsKey(v)).Select(v => $"{map[v]}?"));
                 string command = $"S {axis}";
-                _serialPort!.Write(command + '\r');
+                if (!SendCommand(command, out var resp)) return false;
 
-                var resp = WaitValue();
                 if (!CheckReturnMsg(command, resp)) return false;
 
                 resp = resp.Replace("\r\n", "").Replace(":A ", "");
@@ -471,9 +464,9 @@ namespace ASI
                     .Select(kv => $"{map[kv.Key]} = {kv.Value}"));//S X=1.23 Y=3.21 Z=0.2
 
                 string command = $"S {axis}";
-                _serialPort!.Write(command + '\r');
 
-                var resp = WaitValue();
+                if (!SendCommand(command, out var resp)) return false;
+
                 if (!CheckReturnMsg(command, resp)) return false;
 
                 Console.WriteLine("[XXX] SetSpeedAsync Success");
@@ -499,9 +492,8 @@ namespace ASI
             {
                 string command = "RESET";
 
-                _serialPort!.Write(command + '\r');
+                if (!SendCommand(command, out var resp)) return false;
 
-                var resp = WaitValue();
                 if (!CheckReturnMsg(command, resp)) return false;
 
                 Console.WriteLine("[XXX] ResetParam Success");
@@ -527,9 +519,9 @@ namespace ASI
             try
             {
                 string command = "Z";
-                _serialPort!.Write(command + '\r');
 
-                var resp = WaitValue();
+                if (!SendCommand(command, out var resp)) return false;
+
                 if (!CheckReturnMsg(command, resp)) return false;
 
                 Console.WriteLine("[XXX] SetHome Success");
@@ -552,9 +544,8 @@ namespace ASI
             try
             {
                 string command = "HALT";
-                _serialPort!.Write(command + '\r');
+                if (!SendCommand(command, out var resp)) return false;
 
-                var resp = WaitValue();
                 if (!CheckReturnMsg(command, resp)) return false;
 
                 Console.WriteLine("[XXX] Half Success");
@@ -849,15 +840,48 @@ namespace ASI
             }
         }
 
-        private string WaitValue(int timeoutMs = 2000)
+        /// <summary>
+        /// 同步发送命令并等待返回
+        /// </summary>
+        /// <param name="command">要发送的命令</param>
+        /// <param name="respond">收到的返回</param>
+        /// <param name="timeoutMs">超时时间（毫秒）</param>
+        /// <returns>是否成功收到响应</returns>
+        public bool SendCommand(string command, out string respond, int timeoutMs = 2000)
         {
-            _lastResponse = string.Empty;
-            _waitHandle.Reset();
+            respond = string.Empty;
 
-            if (_waitHandle.Wait(timeoutMs))
-                return _lastResponse;
-            else
-                return string.Empty; // 超时
+            if (_serialPort == null || !_serialPort.IsOpen)
+                throw new InvalidOperationException("串口未打开");
+
+            try
+            {
+                // 清理上一次的状态
+                _lastResponse = string.Empty;
+                _waitHandle.Reset();
+                _receiveBuffer = string.Empty;
+
+                // 发送命令
+                Console.WriteLine($"[SEND] {command}");
+                _serialPort.Write(command + "\r");
+
+                // 等待返回
+                if (_waitHandle.Wait(timeoutMs))
+                {
+                    respond = _lastResponse;
+                    return !string.IsNullOrEmpty(respond); // 有返回内容才算成功
+                }
+                else
+                {
+                    Console.WriteLine($"[TIMEOUT] {command} 超时未收到返回");
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] {ex.Message}");
+                throw;
+            }
         }
 
         private static bool CheckReturnMsg(string command, string response)

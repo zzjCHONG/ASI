@@ -23,11 +23,11 @@ namespace ASI
 
         private void OnTimedComsEvent(object sender, ElapsedEventArgs e)
         {
-            GetPostion();
-            GetLimitState();
+            GetPostionandRefresh();
+            GetLimitStateandRefresh();
         }
 
-        public void GetPostion()
+        public void GetPostionandRefresh()
         {
             var res = _ms2000.GetPosition(new uint[] { xAxis, yAxis, zAxis }, out var positions);
             if (!res || positions.Count != 3)
@@ -40,7 +40,7 @@ namespace ASI
             Z = positions[zAxis];
         }
 
-        public void GetLimitState()
+        public void GetLimitStateandRefresh()
         {
             var res = _ms2000.GetAxisState(new uint[] { xAxis, yAxis, zAxis }, out var states);
             if (!res || states.Count != 3)
@@ -123,8 +123,8 @@ namespace ASI
                 uint[] axisMask = axisPositions.Keys.ToArray();
                 while (true)
                 {
-                    GetPostion();//查询轴位置并更新
-                    GetLimitState();//查询轴状态并更新
+                    GetPostionandRefresh();//查询轴位置并更新
+                    GetLimitStateandRefresh();//查询轴状态并更新
 
                     if (!_ms2000.IsAxisMoving(axisMask, out var movingStates))
                     {
@@ -180,8 +180,8 @@ namespace ASI
                 // 循环查询移动状态
                 while (true)
                 {
-                    GetPostion();//查询轴位置并更新
-                    GetLimitState();//查询轴状态并更新
+                    GetPostionandRefresh();//查询轴位置并更新
+                    GetLimitStateandRefresh();//查询轴状态并更新
 
                     if (!_ms2000.IsAxisMoving(new uint[] { axis }, out var movingStates))
                     {
@@ -275,8 +275,8 @@ namespace ASI
 
                 while (true)
                 {
-                    GetPostion();//查询轴位置并更新
-                    GetLimitState();//查询轴状态并更新
+                    GetPostionandRefresh();//查询轴位置并更新
+                    GetLimitStateandRefresh();//查询轴状态并更新
                     if (!_ms2000.IsAxisMoving(value, out var movingStates))
                     {
                         Console.WriteLine("[XXX] OriginHomeAsyncUnilDoneAsync Failed: 查询轴状态失败");
