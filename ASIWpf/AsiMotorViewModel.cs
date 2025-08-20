@@ -486,9 +486,9 @@ namespace ASIWpf
             var props4 = GenerateZPoints(2, -1, 10, 3, 17); // [2, 4, 6, 8, 10]
 
             // 中点模式：中心5，步长1，共5个点
-            var props5 = GenerateZPoints(3, 5, -1, 4, 22); // [3, 4, 5, 6, 7]
+            var props5 = GenerateZPoints(3, 5, -1, 4, 35); // [3, 4, 5, 6, 7]
 
-            var props = props1;
+            var props = props5;
 
             var output = string.Join(" ", props);
             var res = MessageBox.Show($"Z-确认扫描？具体点位：{output}\r\n共计{props.Count}个", "提醒", MessageBoxButton.OKCancel, MessageBoxImage.Information);

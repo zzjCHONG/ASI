@@ -13,6 +13,8 @@ namespace ASI
         private readonly uint zAxis = 3;
         private readonly Timer? _timerRefreshInfo;
 
+        private readonly object _serialLock = new();
+
         public MS2000ASIMotor()
         {
             _ms2000 = new MS2000();
@@ -29,29 +31,35 @@ namespace ASI
 
         public void GetPostionandRefresh()
         {
-            var res = _ms2000.GetPosition(new uint[] { xAxis, yAxis, zAxis }, out var positions);
-            if (!res || positions.Count != 3)
+            lock (_serialLock)
             {
-                Console.WriteLine("##########################################获取位置失败");
-                return;
+                var res = _ms2000.GetPosition(new uint[] { xAxis, yAxis, zAxis }, out var positions);
+                if (!res || positions.Count != 3)
+                {
+                    Console.WriteLine("##########################################获取位置失败");
+                    return;
+                }
+                X = positions[xAxis];
+                Y = positions[yAxis];
+                Z = positions[zAxis];
             }
-            X = positions[xAxis];
-            Y = positions[yAxis];
-            Z = positions[zAxis];
         }
 
         public void GetLimitStateandRefresh()
         {
-            var res = _ms2000.GetAxisState(new uint[] { xAxis, yAxis, zAxis }, out var states);
-            if (!res || states.Count != 3)
+            lock (_serialLock)
             {
-                Console.WriteLine("******************************************获取限位状态失败");
-                return;
-            }
+                var res = _ms2000.GetAxisState(new uint[] { xAxis, yAxis, zAxis }, out var states);
+                if (!res || states.Count != 3)
+                {
+                    Console.WriteLine("******************************************获取限位状态失败");
+                    return;
+                }
 
-            XLimit = states[xAxis] == "L" || states[xAxis] == "U";
-            YLimit = states[yAxis] == "L" || states[yAxis] == "U";
-            ZLimit = states[zAxis] == "L" || states[zAxis] == "U";
+                XLimit = states[xAxis] == "L" || states[xAxis] == "U";
+                YLimit = states[yAxis] == "L" || states[yAxis] == "U";
+                ZLimit = states[zAxis] == "L" || states[zAxis] == "U";
+            }
         }
 
         public bool InitMotor(string com="")
@@ -114,6 +122,8 @@ namespace ASI
             {
                 _timerRefreshInfo!.Stop();
 
+                Console.WriteLine(" _timerRefreshInfo!.Stop");
+
                 if (!await _ms2000.AbsoluteMoveAsync(axisPositions))
                 {
                     Console.WriteLine("[XXX] AbsoluteMoveAsync Failed: 移动命令执行失败");
@@ -128,7 +138,10 @@ namespace ASI
                     index++;
                     Console.WriteLine(index);
 
+                    Console.WriteLine("GetPostionandRefresh");
                     GetPostionandRefresh();//查询轴位置并更新
+
+                    Console.WriteLine("GetLimitStateandRefresh");
                     GetLimitStateandRefresh();//查询轴状态并更新
 
                     if (!_ms2000.IsAxisMoving(axisMask, out var movingStates))
