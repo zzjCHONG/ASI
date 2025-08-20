@@ -741,20 +741,21 @@ namespace ASI
         private readonly ManualResetEventSlim _waitHandle = new(false);
         private string _lastResponse = string.Empty;
 
-        public async Task<(bool, string)> SendCommandAsync(string command, int timeoutMs = 2000)
+        private readonly object _syncRoot = new();
+
+        public async Task<(bool, string)> SendCommandAsync(string command, int timeoutMs = 1500)
         {
-            if (!_serialPort!.IsOpen)
-                throw new InvalidOperationException("串口未打开");
+            lock (_syncRoot)
+            {
+                if (!_serialPort!.IsOpen)
+                    throw new InvalidOperationException("串口未打开");
 
-            // 准备 TaskCompletionSource 等待返回
-            _commandTcs = new TaskCompletionSource<string>();
+                _commandTcs = new TaskCompletionSource<string>();
+                _receiveBuffer = string.Empty;
 
-            // 清空缓冲
-            _receiveBuffer = string.Empty;
-
-            // 发送命令
-            Console.WriteLine($"[SEND] {command}");
-            _serialPort.Write(command + "\r");
+                Console.WriteLine($"[SEND] {command}");
+                _serialPort.Write(command + "\r");
+            }
 
             // 等待返回或超时
             var completedTask = await Task.WhenAny(_commandTcs.Task, Task.Delay(timeoutMs));
@@ -777,33 +778,6 @@ namespace ASI
                 string data = _serialPort!.ReadExisting();
                 _receiveBuffer += data;
 
-                //while (true)
-                //{
-                //    // 找到所有帧头 :A 的最后一个位置
-                //    int lastStartIndex = _receiveBuffer.LastIndexOf(":A", StringComparison.Ordinal);
-                //    if (lastStartIndex < 0)
-                //        break; // 没有帧头，退出
-
-                //    // 找最后一个帧头后面是否有完整帧尾 \r\n
-                //    int endIndex = _receiveBuffer.IndexOf("\r\n", lastStartIndex, StringComparison.Ordinal);
-                //    if (endIndex < 0)
-                //        break; // 没有完整帧尾，等待下一批数据
-
-                //    // 只截取最后一个 :A 到帧尾的数据
-                //    string frame = _receiveBuffer.Substring(lastStartIndex, endIndex - lastStartIndex);
-
-                //    // 清空缓冲区，丢弃之前所有数据
-                //    _receiveBuffer = _receiveBuffer.Substring(endIndex + 2);
-
-                //    // 触发结果
-                //    _lastResponse = frame;
-                //    _commandTcs?.TrySetResult(frame);
-                //    _waitHandle.Set();
-
-                //    // 退出循环，不处理其他帧
-                //    break;
-                //}
-
                 while (true)
                 {
                     // 找第一个帧头
@@ -822,9 +796,13 @@ namespace ASI
                     // 清理已处理的数据
                     _receiveBuffer = _receiveBuffer.Substring(endIndex + 2);
 
-                    // 触发结果
+                    // 更新响应
                     _lastResponse = frame;
+
+                    // 唤醒异步等待方
                     _commandTcs?.TrySetResult(frame);
+
+                    // 唤醒同步等待方
                     _waitHandle.Set();
 
                 }
@@ -837,50 +815,48 @@ namespace ASI
             catch (Exception ex)
             {
                 _commandTcs?.TrySetException(ex);
+                _waitHandle.Set();
             }
         }
 
-        /// <summary>
-        /// 同步发送命令并等待返回
-        /// </summary>
-        /// <param name="command">要发送的命令</param>
-        /// <param name="respond">收到的返回</param>
-        /// <param name="timeoutMs">超时时间（毫秒）</param>
-        /// <returns>是否成功收到响应</returns>
-        public bool SendCommand(string command, out string respond, int timeoutMs = 2000)
+        public bool SendCommand(string command, out string respond, int timeoutMs = 1500)
         {
-            respond = string.Empty;
-
-            if (_serialPort == null || !_serialPort.IsOpen)
-                throw new InvalidOperationException("串口未打开");
-
-            try
+            lock (_syncRoot)
             {
-                // 清理上一次的状态
-                _lastResponse = string.Empty;
-                _waitHandle.Reset();
-                _receiveBuffer = string.Empty;
+                respond = string.Empty;
 
-                // 发送命令
-                Console.WriteLine($"[SEND] {command}");
-                _serialPort.Write(command + "\r");
+                if (_serialPort == null || !_serialPort.IsOpen)
+                    throw new InvalidOperationException("串口未打开");
 
-                // 等待返回
-                if (_waitHandle.Wait(timeoutMs))
+                try
                 {
-                    respond = _lastResponse;
-                    return !string.IsNullOrEmpty(respond); // 有返回内容才算成功
+                    // 清理上一次的状态
+                    _lastResponse = string.Empty;
+                    _waitHandle.Reset();
+                    _receiveBuffer = string.Empty;
+
+                    // 发送命令
+                    if (!command.Contains('W') && !command.Contains('-'))
+                        Console.WriteLine($"[SEND] {command}");
+                    _serialPort.Write(command + "\r");
+
+                    // 等待返回
+                    if (_waitHandle.Wait(timeoutMs))
+                    {
+                        respond = _lastResponse;
+                        return !string.IsNullOrEmpty(respond); // 有返回内容才算成功
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[TIMEOUT] {command} 超时未收到返回");
+                        return false;
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    Console.WriteLine($"[TIMEOUT] {command} 超时未收到返回");
-                    return false;
+                    Console.WriteLine($"[ERROR] {ex.Message}");
+                    throw;
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[ERROR] {ex.Message}");
-                throw;
             }
         }
 

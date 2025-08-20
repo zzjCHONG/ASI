@@ -408,10 +408,10 @@ namespace ASIWpf
         [RelayCommand]
         async Task ScanforRaman()
         {
-            double RectXStart = 30;
-            double RectYStart = 30;
-            double RectXEnd = 35;
-            double RectYEnd = 35;
+            double RectXStart = -1500;
+            double RectYStart = -300;
+            double RectXEnd = -1200;
+            double RectYEnd = 100;
             var startx = Math.Min(RectXStart, RectXEnd);
             var starty = Math.Min(RectYStart, RectYEnd);
 
@@ -422,8 +422,8 @@ namespace ASIWpf
             //double RectYInterval = Math.Abs(RectYStart - RectYEnd) / RectYCount;//间距
 
             //控制间距
-            double RectXInterval = 1;
-            double RectYInterval = 1;
+            double RectXInterval = 40;
+            double RectYInterval = 40;
             int RectXCount = (int)Math.Floor(Math.Abs(RectYStart - RectYEnd) / RectXInterval);
             int RectYCount = (int)Math.Floor(Math.Abs(RectYStart - RectYEnd) / RectYInterval);
 
@@ -442,22 +442,141 @@ namespace ASIWpf
                 }
             }
 
+            if (props.Count > 200)
+            {
+                Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    MessageBox.Show(Application.Current.MainWindow, $"数量过多-{props.Count}！请重新设置！", "扫描提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                });
+                return;
+            }
+
             var output = string.Join(" ", props.Select(p => $"（{p.X}，{p.Y}）"));
             var res = MessageBox.Show($"RAMAN-确认扫描？具体点位：{output}\r\n共计{props.Count}个\r\n间距：X_{RectXInterval} Y_{RectYInterval}", "提醒", MessageBoxButton.OKCancel, MessageBoxImage.Information);
             if (res == MessageBoxResult.OK)
             {
+                var index = 0;
                 var sp = Stopwatch.StartNew();
                 foreach (var item in props)
                 {
+                    index++;
                     await _motor!.SetXPositionAsync(item.X);
                     await _motor.SetYPositionAsync(item.Y);
                     await Task.Delay(10);
-                    Debug.WriteLine($"X_{item.X}__{_motor!.X.ToString("0.00")}__{Math.Abs(item.X - _motor!.X).ToString("0.00")}," +
-                        $"Y_{item.Y}__{_motor!.Y.ToString("0.00")}__{Math.Abs(item.Y - _motor!.Y).ToString("0.00")}");
+                    Debug.WriteLine($"{index} X_{item.X}__{_motor!.X:0.00}__{Math.Abs(item.X - _motor!.X):0.00},Y_{item.Y}__{_motor!.Y:0.00}__{Math.Abs(item.Y - _motor!.Y):0.00}");
                 }
                 sp.Stop();
                 Debug.WriteLine($"RAMAN-FINISH_{props.Count}_{sp.ElapsedMilliseconds}ms!\r\n");
             }
+        }
+
+        [RelayCommand]
+        async Task ScanforZAxis()
+        {
+            // 区间模式：下限=0，上限=10，步进=2，数量×
+            var props1 = GenerateZPoints(0, -75, 75, 2, -1);
+
+            // 区间模式：下限=0，上限=10，步进×，数量=5
+            var props2 = GenerateZPoints(0, 0, 10, -1, 5);
+
+            // 起点模式：起点=5，终点×，步进=3，数量=4
+            var props3 = GenerateZPoints(1, 15, -1, 1, 10);
+
+            // 终点模式：终点10，步长2，共5个点
+            var props4 = GenerateZPoints(2, -1, 10, 3, 17); // [2, 4, 6, 8, 10]
+
+            // 中点模式：中心5，步长1，共5个点
+            var props5 = GenerateZPoints(3, 5, -1, 4, 22); // [3, 4, 5, 6, 7]
+
+            var props = props1;
+
+            var output = string.Join(" ", props);
+            var res = MessageBox.Show($"Z-确认扫描？具体点位：{output}\r\n共计{props.Count}个", "提醒", MessageBoxButton.OKCancel, MessageBoxImage.Information);
+            if (res == MessageBoxResult.OK)
+            {
+                var index = 0;
+                var sp = Stopwatch.StartNew();
+                foreach (var item in props)
+                {
+                    index++;
+                    await _motor!.SetZPositionAsync(item);
+         
+                    await Task.Delay(10);
+                    Debug.WriteLine($"{index} Z_{item}__{_motor!.Z:0.00}__{Math.Abs(item - _motor!.Z):0.00}");
+                }
+                sp.Stop();
+                Debug.WriteLine($"Z-FINISH_{props.Count}_{sp.ElapsedMilliseconds}ms!\r\n");
+            }
+        }
+
+        /// <summary>
+        /// 生成Z轴点位集合
+        /// </summary>
+        /// <param name="mode">
+        /// 模式：
+        /// 0 = 区间模式（zStart, zEnd, step 或 count）
+        /// 1 = 起点模式（zStart, step, count）
+        /// 2 = 终点模式（zEnd, step, count）
+        /// 3 = 中点模式（zCenter, step, count）
+        /// </param>
+        /// <param name="zStart">起点 / 下限 / 中点</param>
+        /// <param name="zEnd">上限 / 终点</param>
+        /// <param name="step">步进</param>
+        /// <param name="count">数量（点数）</param>
+        /// <returns>Z点位集合</returns>
+        public static List<double> GenerateZPoints(int mode, double zStart, double zEnd, double step, int count)
+        {
+            var points = new List<double>();
+
+            switch (mode)
+            {
+                case 0: // 区间模式：zStart,zEnd,step 或 count
+                    if (count > 0)
+                    {
+                        // 按数量均分
+                        double interval = (zEnd - zStart) / (count - 1);
+                        for (int i = 0; i < count; i++)
+                            points.Add(Math.Round(zStart + i * interval, 6));
+                    }
+                    else if (step > 0)
+                    {
+                        if (zStart <= zEnd)
+                        {
+                            for (double z = zStart; z <= zEnd; z += step)
+                                points.Add(Math.Round(z, 6));
+                        }
+                        else
+                        {
+                            for (double z = zStart; z >= zEnd; z -= step)
+                                points.Add(Math.Round(z, 6));
+                        }
+                    }
+                    break;
+
+                case 1: // 起点模式：zStart, step, count
+                    for (int i = 0; i < count; i++)
+                        points.Add(Math.Round(zStart + i * step, 6));
+                    break;
+
+                case 2: // 终点模式：zEnd, step, count
+                    for (int i = count - 1; i >= 0; i--)
+                        points.Insert(0, Math.Round(zEnd - i * step, 6));
+                    break;
+
+                case 3: // 中点模式：zStart 作为中心点 zCenter
+                    if (count <= 0) break;
+
+                    int half = (count - 1) / 2;
+                    for (int i = -half; i <= half; i++)
+                        points.Add(Math.Round(zStart + i * step, 6));
+
+                    // 如果是偶数个点，最后一个点会多出来，需要按需求处理
+                    if (count % 2 == 0)
+                        points.RemoveAt(0); // 移除第一个点，使区间对称
+                    break;
+            }
+
+            return points;
         }
 
     }

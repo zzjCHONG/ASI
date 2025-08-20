@@ -268,13 +268,19 @@
                 Width="130"
                 Margin="5"
                 Command="{Binding ScanforStitchingCommand}"
-                Content="ScanforStitching" />
+                Content="拼接扫描测试" />
             <Button
                 x:Name="ScanforRaman"
                 Width="130"
                 Margin="5"
                 Command="{Binding ScanforRamanCommand}"
-                Content="ScanforRaman" />
+                Content="拉曼扫描测试" />
+            <Button
+                x:Name="ScanforZ"
+                Width="130"
+                Margin="5"
+                Command="{Binding ScanforZAxisCommand}"
+                Content="Z轴扫描测试" />
         </UniformGrid>
 
         <DockPanel
@@ -490,6 +496,13 @@
                         Style="{DynamicResource GroupBoxTab}">
                         <TextBox Text="{Binding ZSpeed}" />
                     </GroupBox>
+
+                    <Button
+                        Width="130"
+                        Margin="5"
+                        Command="{Binding ScanforZAxisCommand}"
+                        Content="Z轴扫描测试" />
+                    
                 </StackPanel>
             </Grid>
         </DockPanel>

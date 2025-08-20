@@ -114,15 +114,20 @@ namespace ASI
             {
                 _timerRefreshInfo!.Stop();
 
-                if (!await _ms2000. AbsoluteMoveAsync(axisPositions))
+                if (!await _ms2000.AbsoluteMoveAsync(axisPositions))
                 {
                     Console.WriteLine("[XXX] AbsoluteMoveAsync Failed: 移动命令执行失败");
                     return false;
                 }
 
+                var index = 0;
+
                 uint[] axisMask = axisPositions.Keys.ToArray();
                 while (true)
                 {
+                    index++;
+                    Console.WriteLine(index);
+
                     GetPostionandRefresh();//查询轴位置并更新
                     GetLimitStateandRefresh();//查询轴状态并更新
 
@@ -169,17 +174,21 @@ namespace ASI
             try
             {
                 _timerRefreshInfo!.Stop();
-                _ms2000.Discard();
 
-                if (!await _ms2000. RelativeMoveAsync(axis, pos))
+                if (!await _ms2000.RelativeMoveAsync(axis, pos))
                 {
                     Console.WriteLine("[XXX] RelativeMoveUnilDoneAsync Failed: 移动命令执行失败");
                     return false;
                 }
 
+                var index = 0;
+
                 // 循环查询移动状态
                 while (true)
                 {
+                    index++;
+                    Console.WriteLine(index);
+
                     GetPostionandRefresh();//查询轴位置并更新
                     GetLimitStateandRefresh();//查询轴状态并更新
 
@@ -265,16 +274,19 @@ namespace ASI
             try
             {
                 _timerRefreshInfo!.Stop();
-                _ms2000.Discard();
 
-                if (!await _ms2000. OriginHomeAsync(value))
+                if (!await _ms2000.OriginHomeAsync(value))
                 {
                     Console.WriteLine("[XXX] OriginHomeAsync Failed: 移动命令执行失败");
                     return false;
                 }
 
+                var index = 0;
+
                 while (true)
                 {
+                    index++;
+                    Console.WriteLine(index);
                     GetPostionandRefresh();//查询轴位置并更新
                     GetLimitStateandRefresh();//查询轴状态并更新
                     if (!_ms2000.IsAxisMoving(value, out var movingStates))
@@ -366,10 +378,7 @@ namespace ASI
         /// <returns></returns>
         private bool GetSpeed(uint axis, out double speed)
         {
-            _timerRefreshInfo!.Stop();
-            _ms2000.Discard();
             var res = _ms2000.GetSpeed(axis, out speed);
-            _timerRefreshInfo!.Start();
             return res;
         }
 
@@ -381,10 +390,7 @@ namespace ASI
         /// <returns></returns>
         private bool SetSpeed(uint axis, double speed)
         {
-            _timerRefreshInfo!.Stop();
-            _ms2000.Discard();
             var res = _ms2000.SetSpeed(axis,  speed);
-            _timerRefreshInfo!.Start();
             return res;
         }
 

@@ -2,21 +2,45 @@
 {
     internal class Program
     {
-        static async Task Main(string[] args)
+        static void Main(string[] args)
         {
             MS2000 mS2000 = new();
             if (mS2000.OpenCom("COM10"))
             {
-
-                mS2000.Discard();
-
-                var pos = new Dictionary<uint, double>() { { 1, 1000 }, { 2, 2000 }, { 3, 50 } };
-                if (!await mS2000.AbsoluteMoveAsync(pos))
+                while (true)
                 {
-                    Console.WriteLine("[XXX] AbsoluteMoveAsync Failed: 移动命令执行失败");
-                 
+                    var res = mS2000.GetPosition(new uint[] { 1, 2, 3 }, out var positions); ;
+                    if (!res || positions.Count != 3)
+                    {
+                        Console.WriteLine("##########################################获取位置失败");
+                        Console.ReadLine();
+                    }
+                    else
+                    {
+                        Console.WriteLine(string.Join(" ", positions));
+                    }
+
+                    var res0 = mS2000.GetAxisState(new uint[] { 1, 2, 3 }, out var states);
+                    if (!res0 || states.Count != 3)
+                    {
+                        Console.WriteLine("******************************************获取限位状态失败");
+                        Console.ReadLine();
+                    }
+                    else
+                    {
+                        Console.WriteLine(string.Join(" ", states));
+                    }
+
+                    Thread.Sleep(200);
                 }
 
+                //mS2000.Discard();
+                //var pos = new Dictionary<uint, double>() { { 1, 1000 }, { 2, 2000 }, { 3, 50 } };
+                //if (!await mS2000.AbsoluteMoveAsync(pos))
+                //{
+                //    Console.WriteLine("[XXX] AbsoluteMoveAsync Failed: 移动命令执行失败");
+
+                //}
 
                 ////W X Y
                 ////S X? Y? Z?
@@ -59,19 +83,19 @@
 
             }
 
-            MS2000ASIMotor mS2000ASIMotor = new MS2000ASIMotor();
-            if (mS2000ASIMotor.InitMotor("com10"))
-            {
-                //mS2000ASIMotor.GetPostion();
-                //mS2000ASIMotor.GetLimitState();
+            //MS2000ASIMotor mS2000ASIMotor = new MS2000ASIMotor();
+            //if (mS2000ASIMotor.InitMotor("com10"))
+            //{
+            //    //mS2000ASIMotor.GetPostion();
+            //    //mS2000ASIMotor.GetLimitState();
 
-                mS2000ASIMotor.XSpeed = 5;
-                mS2000ASIMotor.YSpeed = 5;
-                mS2000ASIMotor.ZSpeed = 5;
-                Console.WriteLine(mS2000ASIMotor.XSpeed);
-                Console.WriteLine(mS2000ASIMotor.YSpeed);
-                Console.WriteLine(mS2000ASIMotor.ZSpeed);
-            }
+            //    mS2000ASIMotor.XSpeed = 5;
+            //    mS2000ASIMotor.YSpeed = 5;
+            //    mS2000ASIMotor.ZSpeed = 5;
+            //    Console.WriteLine(mS2000ASIMotor.XSpeed);
+            //    Console.WriteLine(mS2000ASIMotor.YSpeed);
+            //    Console.WriteLine(mS2000ASIMotor.ZSpeed);
+            //}
 
             Console.ReadLine();
         }
