@@ -27,7 +27,7 @@ namespace ASI
             GetLimitState();
         }
 
-        private void GetPostion()
+        public void GetPostion()
         {
             var res = _ms2000.GetPosition(new uint[] { xAxis, yAxis, zAxis }, out var positions);
             if (!res || positions.Count != 3)
@@ -40,7 +40,7 @@ namespace ASI
             Z = positions[zAxis];
         }
 
-        private void GetLimitState()
+        public void GetLimitState()
         {
             var res = _ms2000.GetAxisState(new uint[] { xAxis, yAxis, zAxis }, out var states);
             if (!res || states.Count != 3)
@@ -112,17 +112,15 @@ namespace ASI
         {
             try
             {
+                _timerRefreshInfo!.Stop();
+
                 if (!await _ms2000. AbsoluteMoveAsync(axisPositions))
                 {
-                    Console.WriteLine("[XXX] AbsoluteMoveUnilDoneAsync Failed: 移动命令执行失败");
+                    Console.WriteLine("[XXX] AbsoluteMoveAsync Failed: 移动命令执行失败");
                     return false;
                 }
 
                 uint[] axisMask = axisPositions.Keys.ToArray();
-
-                _timerRefreshInfo!.Stop();
-                _ms2000.Discard();
-
                 while (true)
                 {
                     GetPostion();//查询轴位置并更新
@@ -170,14 +168,14 @@ namespace ASI
         {
             try
             {
+                _timerRefreshInfo!.Stop();
+                _ms2000.Discard();
+
                 if (!await _ms2000. RelativeMoveAsync(axis, pos))
                 {
                     Console.WriteLine("[XXX] RelativeMoveUnilDoneAsync Failed: 移动命令执行失败");
                     return false;
                 }
-
-                _timerRefreshInfo!.Stop();
-                _ms2000.Discard();
 
                 // 循环查询移动状态
                 while (true)
@@ -266,14 +264,14 @@ namespace ASI
         {
             try
             {
+                _timerRefreshInfo!.Stop();
+                _ms2000.Discard();
+
                 if (!await _ms2000. OriginHomeAsync(value))
                 {
                     Console.WriteLine("[XXX] OriginHomeAsync Failed: 移动命令执行失败");
                     return false;
                 }
-
-                _timerRefreshInfo!.Stop();
-                _ms2000.Discard();
 
                 while (true)
                 {

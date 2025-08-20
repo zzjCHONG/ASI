@@ -4,50 +4,60 @@
     {
         static async Task Main(string[] args)
         {
-            //MS2000 mS2000 = new();
-            //if (mS2000.OpenCom("COM10"))
-            //{
-            //    //W X Y
-            //    //S X? Y? Z?
-            //    //! X Y Z//HOME
-            //    //H X Y Z
-            //    //RS X Y Z
-            //    //M X=100
-            //    // R X = 100 Y = 1000
-            //    //STATUS
+            MS2000 mS2000 = new();
+            if (mS2000.OpenCom("COM10"))
+            {
 
-            //    //SI X Y Z 回到原始原点
-            //    //SL 软限位 SL X=-50 Y=-50 Z?  :A Z = -110.000
+                mS2000.Discard();
 
-            //    var (RES, STR) = await mS2000.SendCommandAsync("S X? Y? Z?");//RS X Y Z
-            //    if (RES) Console.WriteLine(STR);
+                var pos = new Dictionary<uint, double>() { { 1, 1000 }, { 2, 2000 }, { 3, 50 } };
+                if (!await mS2000.AbsoluteMoveAsync(pos))
+                {
+                    Console.WriteLine("[XXX] AbsoluteMoveAsync Failed: 移动命令执行失败");
+                 
+                }
 
 
-            //    //var (RES2, STR2) = await mS2000.SendCommandAsync("STATUS");//RS X Y Z
-            //    //if (RES2) Console.WriteLine(STR2);
+                ////W X Y
+                ////S X? Y? Z?
+                ////! X Y Z//HOME
+                ////H X Y Z
+                ////RS X Y Z
+                ////M X=100
+                //// R X = 100 Y = 1000
+                ////STATUS
 
-            //    //Console.WriteLine(await mS2000.GetAxisState(123));
-            //    //Console.WriteLine(await mS2000.GetSpeed(123));
+                ////SI X Y Z 回到原始原点
+                ////SL 软限位 SL X=-50 Y=-50 Z?  :A Z = -110.000
 
-            //    ////Console.WriteLine(await mS2000.GetStatus());//暂不可用
+                //var (RES, STR) = await mS2000.SendCommandAsync("S X? Y? Z?");//RS X Y Z
+                //if (RES) Console.WriteLine(STR);
 
-            //    ////Console.WriteLine(await mS2000.Home(123));
-            //    ////Console.WriteLine(await mS2000.SetHome(123));
-            //    ////Console.WriteLine(await mS2000.Half());
+                //var (RES2, STR2) = await mS2000.SendCommandAsync("STATUS");//RS X Y Z
+                //if (RES2) Console.WriteLine(STR2);
 
-            //    ////var axisSpeeds = new Dictionary<int, int> { { 1, 5 }, { 2, 5 }, { 3, 5 } };
-            //    ////Console.WriteLine(await mS2000.SetSpeed(axisSpeeds));
+                //Console.WriteLine(await mS2000.GetAxisState(123));
+                //Console.WriteLine(await mS2000.GetSpeed(123));
 
-            //    //var axisPositions = new Dictionary<int, int> { { 1, 150 }, { 2, 100 }, { 3, 50 } };
-            //    //Console.WriteLine(await mS2000.RelativeMove(axisPositions));
+                ////Console.WriteLine(await mS2000.GetStatus());//暂不可用
 
-            //    //Console.WriteLine(await mS2000.AbsoluteMove(axisPositions));
+                ////Console.WriteLine(await mS2000.Home(123));
+                ////Console.WriteLine(await mS2000.SetHome(123));
+                ////Console.WriteLine(await mS2000.Half());
 
-            //    //Console.WriteLine(await mS2000.GetPosition(123));
-            //    //Console.WriteLine(await mS2000.GetAxisState(123));
-            //    //Console.WriteLine(await mS2000.GetSpeed(123));
+                ////var axisSpeeds = new Dictionary<int, int> { { 1, 5 }, { 2, 5 }, { 3, 5 } };
+                ////Console.WriteLine(await mS2000.SetSpeed(axisSpeeds));
 
-            //}
+                //var axisPositions = new Dictionary<int, int> { { 1, 150 }, { 2, 100 }, { 3, 50 } };
+                //Console.WriteLine(await mS2000.RelativeMove(axisPositions));
+
+                //Console.WriteLine(await mS2000.AbsoluteMove(axisPositions));
+
+                //Console.WriteLine(await mS2000.GetPosition(123));
+                //Console.WriteLine(await mS2000.GetAxisState(123));
+                //Console.WriteLine(await mS2000.GetSpeed(123));
+
+            }
 
             MS2000ASIMotor mS2000ASIMotor = new MS2000ASIMotor();
             if (mS2000ASIMotor.InitMotor("com10"))

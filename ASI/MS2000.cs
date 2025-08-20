@@ -63,7 +63,7 @@ namespace ASI
 
                         if (_dataReceivedEvent.Wait(_validTimeout))
                         {
-                            if (!string.IsNullOrEmpty(_receivedDataforValid))
+                            if (!string.IsNullOrEmpty(_receivedDataforValid) && _receivedDataforValid.Contains("MS2000"))
                             {
                                 _portName = portName;
                                 _serialPort.Close();
@@ -94,12 +94,17 @@ namespace ASI
 
                     if (_dataReceivedEvent.Wait(_validTimeout))
                     {
+                        Console.WriteLine("未超时:" + _receivedDataforValid);
                         if (!string.IsNullOrEmpty(_receivedDataforValid) && _receivedDataforValid.Contains("MS2000"))
                         {
                             _portName = com;
                             _serialPort.Close();
                             return true;
                         }
+                    }
+                    else
+                    {
+                        Console.WriteLine("超时:" + _validTimeout);
                     }
 
                     _serialPort.Close();
@@ -126,7 +131,12 @@ namespace ASI
                 if (!string.IsNullOrEmpty(data))
                 {
                     _receivedDataforValid += data;
-                    _dataReceivedEvent.Set(); // 通知有数据
+
+                    while (_receivedDataforValid.Contains('\r'))
+                    {
+                        _dataReceivedEvent.Set(); // 通知有数据
+                        break;
+                    }
                 }
             }
             catch (Exception ex)
