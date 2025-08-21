@@ -116,7 +116,7 @@ namespace ASIWpf
         public double _yStep = 100;
 
         [ObservableProperty]
-        public double _zStep = 100;
+        public double _zStep = 1;
 
         [ObservableProperty]
         public double _targetX = 0;

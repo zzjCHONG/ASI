@@ -70,6 +70,7 @@
                                 VerticalAlignment="Center"
                                 FontSize="14"
                                 Maximum="50000"
+                                Minimum="-50000"
                                 ValueFormat="N1"
                                 Value="{Binding TargetX}" />
                         </GroupBox>
@@ -83,6 +84,7 @@
                                 VerticalAlignment="Center"
                                 FontSize="14"
                                 Maximum="50000"
+                                Minimum="-50000"
                                 ValueFormat="N1"
                                 Value="{Binding TargetY}" />
                         </GroupBox>
@@ -96,6 +98,8 @@
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
                                 FontSize="14"
+                                Maximum="1000"
+                                Minimum="-1000"
                                 ValueFormat="N1"
                                 Value="{Binding TargetZ}" />
                         </GroupBox>
@@ -134,7 +138,6 @@
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
                                 FontSize="14"
-                                Minimum="0.5"
                                 ValueFormat="N1"
                                 Value="{Binding XStep}" />
                             <Button
@@ -166,7 +169,6 @@
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
                                 FontSize="14"
-                                Minimum="0.5"
                                 ValueFormat="N1"
                                 Value="{Binding YStep}" />
                             <Button
@@ -199,7 +201,6 @@
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
                                 FontSize="14"
-                                Minimum="0.5"
                                 ValueFormat="N1"
                                 Value="{Binding ZStep}" />
                             <Button
@@ -283,15 +284,45 @@
                 Content="Z轴扫描测试" />
         </UniformGrid>
 
+        <DockPanel IsEnabled="{Binding IsConnect}" LastChildFill="True">
+
+            <StackPanel
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Orientation="Horizontal">
+                <GroupBox
+                    Width="80"
+                    Header="XSPEED"
+                    Style="{DynamicResource GroupBoxTab}">
+                    <TextBox Text="{Binding XSpeed}" />
+                </GroupBox>
+
+                <GroupBox
+                    Width="80"
+                    Header="YSPEED"
+                    Style="{DynamicResource GroupBoxTab}">
+                    <TextBox Text="{Binding YSpeed}" />
+                </GroupBox>
+
+                <GroupBox
+                    Width="80"
+                    Header="ZSPEED"
+                    Style="{DynamicResource GroupBoxTab}">
+                    <TextBox Text="{Binding ZSpeed}" />
+                </GroupBox>
+            </StackPanel>
+
+        </DockPanel>
+
         <DockPanel
             Margin="5,12"
             IsHitTestVisible="True"
-            LastChildFill="False">
+            LastChildFill="True">
             <Grid DockPanel.Dock="Top">
                 <StackPanel
-                    Margin="0,0,10,0"
+                    Margin="0,0,0,0"
                     HorizontalAlignment="Center"
-                    VerticalAlignment="Top"
+                    VerticalAlignment="Center"
                     Orientation="Horizontal">
 
                     <ToggleButton
@@ -476,33 +507,6 @@
                         </Border>
                     </ToggleButton>
 
-                    <GroupBox
-                        Width="80"
-                        Header="XSPEED"
-                        Style="{DynamicResource GroupBoxTab}">
-                        <TextBox Text="{Binding XSpeed}" />
-                    </GroupBox>
-
-                    <GroupBox
-                        Width="80"
-                        Header="YSPEED"
-                        Style="{DynamicResource GroupBoxTab}">
-                        <TextBox Text="{Binding YSpeed}" />
-                    </GroupBox>
-
-                    <GroupBox
-                        Width="80"
-                        Header="ZSPEED"
-                        Style="{DynamicResource GroupBoxTab}">
-                        <TextBox Text="{Binding ZSpeed}" />
-                    </GroupBox>
-
-                    <Button
-                        Width="130"
-                        Margin="5"
-                        Command="{Binding ScanforZAxisCommand}"
-                        Content="Z轴扫描测试" />
-                    
                 </StackPanel>
             </Grid>
         </DockPanel>

@@ -7,32 +7,36 @@
             MS2000 mS2000 = new();
             if (mS2000.OpenCom("COM10"))
             {
-                while (true)
-                {
-                    var res = mS2000.GetPosition(new uint[] { 1, 2, 3 }, out var positions); ;
-                    if (!res || positions.Count != 3)
-                    {
-                        Console.WriteLine("##########################################获取位置失败");
-                        Console.ReadLine();
-                    }
-                    else
-                    {
-                        Console.WriteLine(string.Join(" ", positions));
-                    }
+                Console.WriteLine(mS2000.ResetParam()); 
 
-                    var res0 = mS2000.GetAxisState(new uint[] { 1, 2, 3 }, out var states);
-                    if (!res0 || states.Count != 3)
-                    {
-                        Console.WriteLine("******************************************获取限位状态失败");
-                        Console.ReadLine();
-                    }
-                    else
-                    {
-                        Console.WriteLine(string.Join(" ", states));
-                    }
+                Console.ReadLine();
 
-                    Thread.Sleep(200);
-                }
+                //while (true)
+                //{
+                //    var res = mS2000.GetPosition(new uint[] { 1, 2, 3 }, out var positions); ;
+                //    if (!res || positions.Count != 3)
+                //    {
+                //        Console.WriteLine("##########################################获取位置失败");
+                //        Console.ReadLine();
+                //    }
+                //    else
+                //    {
+                //        Console.WriteLine(string.Join(" ", positions));
+                //    }
+
+                //    var res0 = mS2000.GetAxisState(new uint[] { 1, 2, 3 }, out var states);
+                //    if (!res0 || states.Count != 3)
+                //    {
+                //        Console.WriteLine("******************************************获取限位状态失败");
+                //        Console.ReadLine();
+                //    }
+                //    else
+                //    {
+                //        Console.WriteLine(string.Join(" ", states));
+                //    }
+
+                //    Thread.Sleep(200);
+                //}
 
                 //mS2000.Discard();
                 //var pos = new Dictionary<uint, double>() { { 1, 1000 }, { 2, 2000 }, { 3, 50 } };

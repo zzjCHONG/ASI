@@ -1,5 +1,6 @@
 ﻿using Simscop.Pl.Core.Constants;
 using Simscop.Pl.Core.Interfaces;
+using System.Diagnostics;
 using System.Timers;
 using Timer = System.Timers.Timer;
 
@@ -33,10 +34,15 @@ namespace ASI
         {
             lock (_serialLock)
             {
+                //开了一个时钟线程一直在读取值。当需要停止时钟的读取，然后进行调用绝对移动或者其他的设置时，
+                //会清空缓存数据，这样就会导致获取状态或者获取数据是不完整的。下方函数同样如此
+
                 var res = _ms2000.GetPosition(new uint[] { xAxis, yAxis, zAxis }, out var positions);
                 if (!res || positions.Count != 3)
                 {
+                    //todo，后续此处不输出错误提示。
                     Console.WriteLine("##########################################获取位置失败");
+                    Debug.WriteLine("##########################################获取位置失败");
                     return;
                 }
                 X = positions[xAxis];
@@ -53,6 +59,46 @@ namespace ASI
                 if (!res || states.Count != 3)
                 {
                     Console.WriteLine("******************************************获取限位状态失败");
+                    Debug.WriteLine("******************************************获取限位状态失败");
+                    return;
+                }
+
+                XLimit = states[xAxis] == "L" || states[xAxis] == "U";
+                YLimit = states[yAxis] == "L" || states[yAxis] == "U";
+                ZLimit = states[zAxis] == "L" || states[zAxis] == "U";
+            }
+        }
+
+        public void GetPostionandRefresh2()
+        {
+            lock (_serialLock)
+            {
+                //开了一个时钟线程一直在读取值。当需要停止时钟的读取，然后进行调用绝对移动或者其他的设置时，
+                //会清空缓存数据，这样就会导致获取状态或者获取数据是不完整的。下方函数同样如此
+
+                var res = _ms2000.GetPosition(new uint[] { xAxis, yAxis, zAxis }, out var positions);
+                if (!res || positions.Count != 3)
+                {
+                    //todo，后续此处不输出错误提示。
+                    Console.WriteLine("##########################################GetPostionandRefresh2获取位置失败");
+                    Debug.WriteLine("##########################################GetPostionandRefresh2获取位置失败");
+                    return;
+                }
+                X = positions[xAxis];
+                Y = positions[yAxis];
+                Z = positions[zAxis];
+            }
+        }
+
+        public void GetLimitStateandRefresh2()
+        {
+            lock (_serialLock)
+            {
+                var res = _ms2000.GetAxisState(new uint[] { xAxis, yAxis, zAxis }, out var states);
+                if (!res || states.Count != 3)
+                {
+                    Console.WriteLine("******************************************GetLimitStateandRefresh2获取限位状态失败");
+                    Debug.WriteLine("******************************************GetLimitStateandRefresh2获取限位状态失败");
                     return;
                 }
 
@@ -139,10 +185,10 @@ namespace ASI
                     Console.WriteLine(index);
 
                     Console.WriteLine("GetPostionandRefresh");
-                    GetPostionandRefresh();//查询轴位置并更新
+                    GetPostionandRefresh2();//查询轴位置并更新
 
                     Console.WriteLine("GetLimitStateandRefresh");
-                    GetLimitStateandRefresh();//查询轴状态并更新
+                    GetLimitStateandRefresh2();//查询轴状态并更新
 
                     if (!_ms2000.IsAxisMoving(axisMask, out var movingStates))
                     {
@@ -202,8 +248,8 @@ namespace ASI
                     index++;
                     Console.WriteLine(index);
 
-                    GetPostionandRefresh();//查询轴位置并更新
-                    GetLimitStateandRefresh();//查询轴状态并更新
+                    GetPostionandRefresh2();//查询轴位置并更新
+                    GetLimitStateandRefresh2();//查询轴状态并更新
 
                     if (!_ms2000.IsAxisMoving(new uint[] { axis }, out var movingStates))
                     {
@@ -300,8 +346,8 @@ namespace ASI
                 {
                     index++;
                     Console.WriteLine(index);
-                    GetPostionandRefresh();//查询轴位置并更新
-                    GetLimitStateandRefresh();//查询轴状态并更新
+                    GetPostionandRefresh2();//查询轴位置并更新
+                    GetLimitStateandRefresh2();//查询轴状态并更新
                     if (!_ms2000.IsAxisMoving(value, out var movingStates))
                     {
                         Console.WriteLine("[XXX] OriginHomeAsyncUnilDoneAsync Failed: 查询轴状态失败");
@@ -391,7 +437,9 @@ namespace ASI
         /// <returns></returns>
         private bool GetSpeed(uint axis, out double speed)
         {
+            _timerRefreshInfo!.Stop();
             var res = _ms2000.GetSpeed(axis, out speed);
+            _timerRefreshInfo!.Start();
             return res;
         }
 
@@ -403,7 +451,9 @@ namespace ASI
         /// <returns></returns>
         private bool SetSpeed(uint axis, double speed)
         {
-            var res = _ms2000.SetSpeed(axis,  speed);
+            _timerRefreshInfo!.Stop();
+            var res = _ms2000.SetSpeed(axis, speed);
+            _timerRefreshInfo!.Start();
             return res;
         }
 

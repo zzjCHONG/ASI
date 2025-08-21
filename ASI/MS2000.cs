@@ -392,6 +392,8 @@ namespace ASI
         {
             try
             {
+                speed = speed < 0 ? 0 : (speed > 7.5 ? 7.5 : speed);
+
                 if (!map.TryGetValue(axis, out var str)) return false;
                 string command = $"S {str}={speed}";//S X=1.23 Y=3.21 Z=0.2
 
@@ -461,7 +463,7 @@ namespace ASI
             {
                 var axis = string.Join(" ", axisSpeeds
                     .Where(kv => map.ContainsKey(kv.Key)) 
-                    .Select(kv => $"{map[kv.Key]} = {kv.Value}"));//S X=1.23 Y=3.21 Z=0.2
+                    .Select(kv => $"{map[kv.Key]} = {(kv.Value < 0 ? 0 : (kv.Value > 7.5 ? 7.5 : kv.Value))}"));//S X=1.23 Y=3.21 Z=0.2
 
                 string command = $"S {axis}";
 
@@ -780,6 +782,21 @@ namespace ASI
 
                 while (true)
                 {
+                    // 先判断是否包含特殊响应（不带帧头帧尾）
+                    if (_receiveBuffer.Contains("RESET"))
+                    {
+                        string response = "RESET";
+                        _lastResponse = response;
+
+                        // 清掉已处理数据（避免影响后续解析）
+                        _receiveBuffer = _receiveBuffer.Replace("RESET", string.Empty);
+
+                        // 唤醒同步等待方
+                        _waitHandle.Set();
+                        _commandTcs?.TrySetResult(response);
+                        break;
+                    }
+
                     // 找第一个帧头
                     int startIndex = _receiveBuffer.IndexOf(":A", StringComparison.Ordinal);
                     if (startIndex < 0)
@@ -836,7 +853,7 @@ namespace ASI
                     _receiveBuffer = string.Empty;
 
                     // 发送命令
-                    if (!command.Contains('W') && !command.Contains('-'))
+                    if (!command.Contains('W') && !command.Contains("-"))
                         Console.WriteLine($"[SEND] {command}");
                     _serialPort.Write(command + "\r");
 
@@ -889,11 +906,16 @@ namespace ASI
                 }
                 else
                 {
-                    if (!command.Contains("W") && !command.Contains("-"))
-
+                    if (!command.Contains('W') && !command.Contains("-"))
                         Console.WriteLine($"[OK] 命令 {command} 校验通过，返回: {response}");
+
                     return true;
                 }
+            }
+            else if (response.Contains("RESET"))
+            {
+                Console.WriteLine($"[OK] 命令 {command} 校验通过，返回: {response}");
+                return true;
             }
             else
             {

@@ -7,7 +7,7 @@
     xmlns:local="clr-namespace:ASIWpf"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     Width="800"
-    Height="650"
+    Height="680"
     ResizeMode="CanMinimize"
     mc:Ignorable="d">
     <liftui:Window.NonClientAreaContent>
@@ -17,7 +17,7 @@
                 FontSize="14"
                 FontWeight="Bold"
                 Foreground="#509CFF"
-                Text="Laserwave" />
+                Text="ASIMotor" />
         </StackPanel>
     </liftui:Window.NonClientAreaContent>
 
