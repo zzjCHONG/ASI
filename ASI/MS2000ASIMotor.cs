@@ -368,7 +368,7 @@ namespace ASI
         {
             _timerRefreshInfo!.Stop();
             var res = _ms2000.ResetParam();
-            Thread.Sleep(1000);//系统重启需时间
+            Thread.Sleep(1500);//系统重启需时间
             _timerRefreshInfo!.Start();
             return res;
         }
