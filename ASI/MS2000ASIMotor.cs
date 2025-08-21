@@ -34,15 +34,12 @@ namespace ASI
         {
             lock (_serialLock)
             {
-                //开了一个时钟线程一直在读取值。当需要停止时钟的读取，然后进行调用绝对移动或者其他的设置时，
-                //会清空缓存数据，这样就会导致获取状态或者获取数据是不完整的。下方函数同样如此
-
                 var res = _ms2000.GetPosition(new uint[] { xAxis, yAxis, zAxis }, out var positions);
                 if (!res || positions.Count != 3)
                 {
                     //todo，后续此处不输出错误提示。
-                    Console.WriteLine("##########################################获取位置失败");
-                    Debug.WriteLine("##########################################获取位置失败");
+                    //Console.WriteLine($"##########################################获取位置失败 {res} {positions.Count}");
+                    //Debug.WriteLine($"##########################################获取位置失败 {res} {positions.Count}");
                     return;
                 }
                 X = positions[xAxis];
@@ -58,47 +55,8 @@ namespace ASI
                 var res = _ms2000.GetAxisState(new uint[] { xAxis, yAxis, zAxis }, out var states);
                 if (!res || states.Count != 3)
                 {
-                    Console.WriteLine("******************************************获取限位状态失败");
-                    Debug.WriteLine("******************************************获取限位状态失败");
-                    return;
-                }
-
-                XLimit = states[xAxis] == "L" || states[xAxis] == "U";
-                YLimit = states[yAxis] == "L" || states[yAxis] == "U";
-                ZLimit = states[zAxis] == "L" || states[zAxis] == "U";
-            }
-        }
-
-        public void GetPostionandRefresh2()
-        {
-            lock (_serialLock)
-            {
-                //开了一个时钟线程一直在读取值。当需要停止时钟的读取，然后进行调用绝对移动或者其他的设置时，
-                //会清空缓存数据，这样就会导致获取状态或者获取数据是不完整的。下方函数同样如此
-
-                var res = _ms2000.GetPosition(new uint[] { xAxis, yAxis, zAxis }, out var positions);
-                if (!res || positions.Count != 3)
-                {
-                    //todo，后续此处不输出错误提示。
-                    Console.WriteLine("##########################################GetPostionandRefresh2获取位置失败");
-                    Debug.WriteLine("##########################################GetPostionandRefresh2获取位置失败");
-                    return;
-                }
-                X = positions[xAxis];
-                Y = positions[yAxis];
-                Z = positions[zAxis];
-            }
-        }
-
-        public void GetLimitStateandRefresh2()
-        {
-            lock (_serialLock)
-            {
-                var res = _ms2000.GetAxisState(new uint[] { xAxis, yAxis, zAxis }, out var states);
-                if (!res || states.Count != 3)
-                {
-                    Console.WriteLine("******************************************GetLimitStateandRefresh2获取限位状态失败");
-                    Debug.WriteLine("******************************************GetLimitStateandRefresh2获取限位状态失败");
+                    //Console.WriteLine("******************************************获取限位状态失败");
+                    //Debug.WriteLine("******************************************获取限位状态失败");
                     return;
                 }
 
@@ -155,6 +113,8 @@ namespace ASI
 
         public Task<bool> SetZPositionAsync(double zPosition) => AbsoluteMoveUnilDoneAsync(new Dictionary<uint, double> { { zAxis, zPosition } });
 
+        private CancellationTokenSource? _ctsMove;
+
         /// <summary>
         /// 绝对位移，等待直至到位
         /// 多轴
@@ -166,9 +126,11 @@ namespace ASI
         {
             try
             {
-                _timerRefreshInfo!.Stop();
+                _ctsMove = new CancellationTokenSource();
+                var token = _ctsMove.Token;
 
-                Console.WriteLine(" _timerRefreshInfo!.Stop");
+                _timerRefreshInfo!.Stop();
+                await Task.Delay(50);
 
                 if (!await _ms2000.AbsoluteMoveAsync(axisPositions))
                 {
@@ -176,19 +138,18 @@ namespace ASI
                     return false;
                 }
 
-                var index = 0;
-
                 uint[] axisMask = axisPositions.Keys.ToArray();
                 while (true)
                 {
-                    index++;
-                    Console.WriteLine(index);
+                    token.ThrowIfCancellationRequested(); 
 
-                    Console.WriteLine("GetPostionandRefresh");
-                    GetPostionandRefresh2();//查询轴位置并更新
+                    GetPostionandRefresh();
 
-                    Console.WriteLine("GetLimitStateandRefresh");
-                    GetLimitStateandRefresh2();//查询轴状态并更新
+                    token.ThrowIfCancellationRequested();
+
+                    GetLimitStateandRefresh();
+
+                    token.ThrowIfCancellationRequested();
 
                     if (!_ms2000.IsAxisMoving(axisMask, out var movingStates))
                     {
@@ -205,12 +166,18 @@ namespace ASI
                     }
 
                     // 等待下一次查询
-                    await Task.Delay(pollIntervalMs);
+                    await Task.Delay(pollIntervalMs,token);
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                Console.WriteLine("[XXX] AbsoluteMoveUnilDoneAsync Cancelled: 已被手动停止");//
+                return false;
             }
             catch (Exception e)
             {
                 Console.WriteLine("[XXX] AbsoluteMoveUnilDoneAsync Failed: " + e.Message);
+                _timerRefreshInfo!.Start();
                 return false;
             }
         }
@@ -232,7 +199,8 @@ namespace ASI
         {
             try
             {
-                _timerRefreshInfo!.Stop();
+                _ctsMove = new CancellationTokenSource();
+                var token = _ctsMove.Token;
 
                 if (!await _ms2000.RelativeMoveAsync(axis, pos))
                 {
@@ -240,43 +208,45 @@ namespace ASI
                     return false;
                 }
 
-                var index = 0;
-
-                // 循环查询移动状态
                 while (true)
                 {
-                    index++;
-                    Console.WriteLine(index);
+                    token.ThrowIfCancellationRequested();
 
-                    GetPostionandRefresh2();//查询轴位置并更新
-                    GetLimitStateandRefresh2();//查询轴状态并更新
+                    GetPostionandRefresh();
+
+                    token.ThrowIfCancellationRequested();
+
+                    GetLimitStateandRefresh();
+
+                    token.ThrowIfCancellationRequested();
 
                     if (!_ms2000.IsAxisMoving(new uint[] { axis }, out var movingStates))
                     {
                         Console.WriteLine("[XXX] RelativeMoveUnilDoneAsync Failed: 查询轴状态失败");
-                        _timerRefreshInfo.Start();
+                        _timerRefreshInfo!.Start();
                         return false;
                     }
 
-                    // 如果所有轴都停止了
-                    //数据串扰导致movingStates为空，需处理
                     if (movingStates.Count != 0 && movingStates.Values.All(m => !m))
                     {
                         Console.WriteLine("[XXX] RelativeMoveUnilDoneAsync Success: 所有轴已停止");
 
-                        _timerRefreshInfo.Start();
+                        _timerRefreshInfo!.Start();
                         return true;
                     }
 
-                    // 等待下一次查询
-                    await Task.Delay(pollIntervalMs);
+                    await Task.Delay(pollIntervalMs,token);
                 }
-
-
+            }
+            catch (OperationCanceledException)
+            {
+                Console.WriteLine("[XXX] RelativeMoveUnilDoneAsync Cancelled: 已被手动停止");
+                return false;
             }
             catch (Exception e)
             {
                 Console.WriteLine("[XXX] RelativeMoveUnilDoneAsync Failed: " + e.Message);
+                _timerRefreshInfo!.Start();
                 return false;
             }
         }
@@ -312,10 +282,19 @@ namespace ASI
 
         public bool Stop()
         {
-            _timerRefreshInfo!.Stop();
-            var res = _ms2000.Half();
-            _timerRefreshInfo!.Start();
-            return res;
+            try
+            {
+                _ctsMove?.Cancel();
+                _timerRefreshInfo!.Stop();
+                var res = _ms2000.Half();
+                _timerRefreshInfo!.Start();
+                return res;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[XXX] Stop Failed: " + ex.Message);
+                return false;
+            }
         }
 
         public Task<bool> OriginPosHomeAsync() => OriginHomeUnilDoneAsync(new uint[] { xAxis, yAxis, zAxis });
@@ -332,7 +311,11 @@ namespace ASI
         {
             try
             {
+                _ctsMove = new CancellationTokenSource();
+                var token = _ctsMove.Token;
+
                 _timerRefreshInfo!.Stop();
+                await Task.Delay(50);
 
                 if (!await _ms2000.OriginHomeAsync(value))
                 {
@@ -340,14 +323,18 @@ namespace ASI
                     return false;
                 }
 
-                var index = 0;
-
                 while (true)
                 {
-                    index++;
-                    Console.WriteLine(index);
-                    GetPostionandRefresh2();//查询轴位置并更新
-                    GetLimitStateandRefresh2();//查询轴状态并更新
+                    token.ThrowIfCancellationRequested();
+
+                    GetPostionandRefresh();
+
+                    token.ThrowIfCancellationRequested();
+
+                    GetLimitStateandRefresh();
+
+                    token.ThrowIfCancellationRequested();
+
                     if (!_ms2000.IsAxisMoving(value, out var movingStates))
                     {
                         Console.WriteLine("[XXX] OriginHomeAsyncUnilDoneAsync Failed: 查询轴状态失败");
@@ -358,17 +345,21 @@ namespace ASI
                     if (movingStates.Count != 0 && movingStates.Values.All(m => !m))
                     {
                         Console.WriteLine("[XXX] OriginHomeAsyncUnilDoneAsync Success: 所有轴已停止");
-                        _timerRefreshInfo!.Start();
                         return true;
                     }
 
-                    // 等待下一次查询
                     await Task.Delay(pollIntervalMs);
                 }
             }
+            catch (OperationCanceledException)
+            {
+                Console.WriteLine("[XXX] OriginHomeUnilDoneAsync Cancelled: 已被手动停止");
+                return false;
+            }
             catch (Exception e)
             {
-                Console.WriteLine("[XXX] RelativeMoveUnilDoneAsync Failed: " + e.Message);
+                Console.WriteLine("[XXX] OriginHomeUnilDoneAsync Failed: " + e.Message);
+                _timerRefreshInfo!.Start();
                 return false;
             }
         }
@@ -377,6 +368,7 @@ namespace ASI
         {
             _timerRefreshInfo!.Stop();
             var res = _ms2000.ResetParam();
+            Thread.Sleep(1000);//系统重启需时间
             _timerRefreshInfo!.Start();
             return res;
         }
@@ -388,14 +380,14 @@ namespace ASI
         {
             get
             {
-                var res =GetSpeed(xAxis, out var speed);
+                var res = GetSpeed(xAxis, out var speed);
                 if (!res) return 0;
                 return speed;
             }
             set
             {
                 var res = SetSpeed(xAxis, value);
-                if (!res) Console.WriteLine("设置速度失败！");
+                if (!res) Console.WriteLine("设置x速度失败！");
             }
         }
 
@@ -410,7 +402,7 @@ namespace ASI
             set
             {
                 var res = SetSpeed(yAxis, value);
-                if (!res) Console.WriteLine("设置速度失败！");
+                if (!res) Console.WriteLine("设置y速度失败！");
             }
         }
 
@@ -425,7 +417,7 @@ namespace ASI
             set
             {
                 var res = SetSpeed(zAxis, value);
-                if (!res) Console.WriteLine("设置速度失败！");
+                if (!res) Console.WriteLine("设置z速度失败！");
             }
         }
 
@@ -474,7 +466,6 @@ namespace ASI
         public bool YTaskRunning => throw new NotImplementedException();
 
         public bool ZTaskRunning => throw new NotImplementedException();
-
 
     }
 }

@@ -539,6 +539,7 @@ namespace ASI
 
         /// <summary>
         /// 急停
+        /// 交互过程中，急停无法保证准确验证信息。此处只做信息下发，不校验
         /// </summary>
         /// <returns></returns>
         public bool Half()
@@ -546,9 +547,10 @@ namespace ASI
             try
             {
                 string command = "HALT";
-                if (!SendCommand(command, out var resp)) return false;
+                _serialPort!.Write(command + '\r');
 
-                if (!CheckReturnMsg(command, resp)) return false;
+                //if (!SendCommand(command, out var resp)) return false;
+                //if (!CheckReturnMsg(command, resp)) return false;
 
                 Console.WriteLine("[XXX] Half Success");
                 return true;
@@ -726,10 +728,6 @@ namespace ASI
             }
         }
 
-        public void Discard()
-        {
-            _serialPort!.DiscardInBuffer();
-        }
     }
 
     public partial class MS2000

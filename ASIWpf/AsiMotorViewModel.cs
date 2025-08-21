@@ -315,13 +315,13 @@ namespace ASIWpf
         void SetOriginPos()
         {
             if (!_motor!.SetOriginPos())
-               Console.WriteLine("设置原点错误！");
+                Console.WriteLine("设置原点错误！");
         }
 
         [RelayCommand]
         void Stop()
         {
-            var res =  _motor!.Stop();
+            var res = _motor!.Stop();
             if (!res)
                 Console.WriteLine("急停错误!");
         }

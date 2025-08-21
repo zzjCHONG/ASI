@@ -512,7 +512,7 @@
         </DockPanel>
 
         <UniformGrid
-            Margin="10,10"
+            Margin="10,5"
             Columns="3"
             IsEnabled="{Binding IsOperable}">
             <ComboBox

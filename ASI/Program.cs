@@ -7,7 +7,7 @@
             MS2000 mS2000 = new();
             if (mS2000.OpenCom("COM10"))
             {
-                Console.WriteLine(mS2000.ResetParam()); 
+                Console.WriteLine(mS2000.Half()); 
 
                 Console.ReadLine();
 

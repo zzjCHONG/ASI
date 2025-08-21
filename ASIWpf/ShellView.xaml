@@ -7,7 +7,7 @@
     xmlns:local="clr-namespace:ASIWpf"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     Width="800"
-    Height="680"
+    Height="670"
     ResizeMode="CanMinimize"
     mc:Ignorable="d">
     <liftui:Window.NonClientAreaContent>
